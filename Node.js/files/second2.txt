@@ -1,0 +1,2 @@
+Process.on uncaughtException is a global error handler in Node.js that catches errors which are not handled anywhere in the application.
+ This is newly added line
