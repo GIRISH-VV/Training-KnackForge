@@ -1,11 +1,10 @@
 console.log("Hello World!");
 
-const os = require('os');
-// import os from 'os'  another way of import but need to change extensions as .mjs i.e. Server.mjs cannot use require in mjs
+const os = require('os');    //import .mjs and require .js - for import .js need to add "type": "module" in package.json
 
-// console.log(os.type());
-// console.log(os.version());
-// console.log(os.homedir());
+console.log(os.type());
+console.log(os.version());
+console.log(os.homedir());
 
 console.log(__dirname);
 console.log(__filename);
@@ -56,3 +55,6 @@ process.on('uncaughtException',err => {
     console.error(`There was an uncaugth error : ${err}`)
     process.exit(1)
 })
+
+
+

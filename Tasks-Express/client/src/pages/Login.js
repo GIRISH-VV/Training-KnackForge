@@ -23,12 +23,16 @@ function Login() {
       });
 
       localStorage.setItem("token", res.data.accessToken);
-      navigate("/me");
+      // navigate("/me");
+      navigate("/users");
 
     } catch (err) {
       setError(err.response?.data?.message || "Login failed");
     }
   };
+  const movetoRegister = () => {
+      navigate("/register");
+    };
 
   return (
     <div className="auth-container">
@@ -55,6 +59,8 @@ function Login() {
       <button type="submit">Login</button>
     </form>
   </div>
+  <button className="register-btn" onClick={movetoRegister} >Register</button>
+
 </div>
   );
 }

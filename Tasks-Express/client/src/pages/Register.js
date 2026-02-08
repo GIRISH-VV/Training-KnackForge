@@ -1,5 +1,6 @@
 import { useState } from "react";
 import API from "../services/api";
+import { useNavigate } from "react-router-dom";
 
 function Register() {
   const [name, setName] = useState("");
@@ -7,20 +8,26 @@ function Register() {
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("");
   const [error, setError] = useState("");
+  const navigate = useNavigate();
 
   const registerUser = async () => {
     try {
       await API.post("/users/register", { name, email, password, role });
       alert("Registered successfully");
+      navigate("/login");
     } catch (err) {
         if (err.response && err.response.data) {
           setError(err.response.data.message);
         } else {
         setError("Server not responding. Please try again.");
-  }
-}
-
+        }
+    }
   };
+    const movetoLogin = () => {
+      navigate("/login");
+    };
+
+  
 
   return (
     <div className="auth-container">
@@ -40,8 +47,11 @@ function Register() {
               <option value="user">user</option>
               <option value="admin">admin</option>
             </select>
-
             <button onClick={registerUser}>Register</button>
+            <div className="ar">
+              <p>ALREADY REGISTERED</p>
+              <button className="login-btn" onClick={movetoLogin}>Login</button>
+            </div>
         </div>
     </div>
   );

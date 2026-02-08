@@ -12,10 +12,12 @@ function Profile() {
   const fetchProfile = async () => {
     try {
       const res = await API.get("/users/me");
-      setUser(res.data);
+      setUser(res.data.user);
     } catch (err) {
-      setError("Unauthorized or session expired");
+        console.log("LOGIN ERROR", err.response?.data || err.message);
+        setError(err.response?.data?.message || "Login failed");
     }
+
   };
 
   if (error) {

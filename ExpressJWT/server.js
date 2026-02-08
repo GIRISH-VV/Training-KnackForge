@@ -7,17 +7,18 @@ import jwt from 'jsonwebtoken'
 import {posts} from './posts.js'
 
 app.use(express.json())
+
 app.get('/posts',authenticateToken,(req,res)=>{
     res.json(posts.filter(post => post.username === req.user.name))
 })
 
-app.post('/login',(req,res)=>{
-    const username  = req.body.username
-    const user = {name:username} //Payload - Stores inside JWT
+// app.post('/login',(req,res)=>{
+//     const username  = req.body.username
+//     const user = {name:username} //Payload - Stores inside JWT
 
-    const accessToken = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET)   //(serializer,SECRET KEY in .env)
-    res.json({accessToken : accessToken})
-})
+//     const accessToken = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET)   //(serializer,SECRET KEY in .env)
+//     res.json({accessToken : accessToken})
+// })
 
 function authenticateToken(req,res,next){
     const authHeader = req.headers['authorization']
@@ -30,16 +31,6 @@ function authenticateToken(req,res,next){
         next()
     })
 }
-
-
-
-
-
-
-
-
-
-
 
 app.listen(3000,()=>{
     console.log("Server started at port 3000")
