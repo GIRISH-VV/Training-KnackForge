@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-const ReminderSchema = new mongoose.Schema(
+const reminderSchema = new mongoose.Schema(
   {
     userId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -9,17 +9,17 @@ const ReminderSchema = new mongoose.Schema(
     },
 
     interval: {
-      type: Number, 
+      type: Number, // minutes
       required: true,
     },
 
     startTime: {
-      type: String,
+      type: String, // "08:00"
       required: true,
     },
 
     endTime: {
-      type: String, 
+      type: String, // "22:00"
       required: true,
     },
 
@@ -27,11 +27,32 @@ const ReminderSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+
+    isPaused: {
+      type: Boolean,
+      default: false,
+    },
+
+    sleepMode: {
+      type: Boolean,
+      default: false,
+    },
+
+    fcmToken: {
+      type: String,
+    },
+
+    lastNotifiedAt: {
+      type: Date,
+    },
+
+    activityLevel: {
+      type: String,
+      enum: ["Low", "Moderate", "High"],
+      default: "Low",
+    },
   },
   { timestamps: true }
 );
 
-const Reminder = mongoose.model("Reminder", ReminderSchema);
-export default Reminder;
-
-//ReminderSchema(start caps) - constructor / class-like object
+export default mongoose.model("Reminder", reminderSchema);

@@ -18,7 +18,7 @@ export const refreshAccessToken = async (req,res) => {
 
         const newAccessToken = generateAccessToken(user._id)    //user._id is taken from memory
         res.status(200).json({ accessToken : newAccessToken})
-    } 
+    }
     catch (error) {
         res.status(403).json({ message : "Invalid refresh token"})
     }

@@ -5,8 +5,7 @@ import { protect } from "../middlewares/authMiddleware.js";
 const router = express.Router();
 
 router.post("/add", protect, createWaterLog);
-router.put("/add", protect, updateWaterLog);
+router.put("/update/:id", protect, updateWaterLog);
 router.delete("/:id", protect, deleteWaterLog);
 router.get("/daily", protect, getDailySummary);
-
 export default router;
