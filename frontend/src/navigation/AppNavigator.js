@@ -6,6 +6,9 @@ import AuthScreen from "../screens/AuthScreen";
 import DashboardScreen from "../screens/DashboardScreen";
 import OnboardingScreen from "../screens/OnboardingScreen";
 import BottomTabs from "./BottomTabs";
+import ReminderScreen from "../screens/ReminderScreen";
+import EditProfileScreen from "../screens/EditProfileScreen";
+import DailyGoalScreen from "../screens/DailyGoalScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -23,6 +26,20 @@ export default function AppNavigator() {
           name="Dashboard"
           component={BottomTabs}
         />
+        <Stack.Screen
+        name="Reminders"
+        component={ReminderScreen}
+        options={{ headerShown: false }}  
+        />
+        <Stack.Screen
+        name="EditProfile"
+         component={EditProfileScreen}
+        />
+        <Stack.Screen
+         name="DailyGoal"
+         component={DailyGoalScreen}
+        />
+        
       </Stack.Navigator>
     </NavigationContainer>
   );

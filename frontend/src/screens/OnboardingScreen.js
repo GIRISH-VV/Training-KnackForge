@@ -316,7 +316,7 @@ const handleComplete = () => {
         desc: "Active outdoor work",
       },
       {
-        title: "Senior",
+        title: "Senior citizen",
         desc: "Adjusted for age 65+",
       },
     ].map((item) => (

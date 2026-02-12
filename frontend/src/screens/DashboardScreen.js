@@ -13,8 +13,12 @@ import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useEffect } from "react";
+import { useNavigation } from "@react-navigation/native";
+
 
 export default function DashboardScreen() {
+
+  const navigation = useNavigation();
 
   //  Intake State
   const [intake, setIntake] = useState(0);
@@ -175,13 +179,16 @@ const deleteLog = (index, amount) => {
               </Text>
             </View>
 
-            <View style={styles.bell}>
-              <Ionicons
-                name="notifications-outline"
-                size={20}
-                color="#3b82f6"
-              />
-            </View>
+            <TouchableOpacity
+             style={styles.bell}
+              onPress={() => navigation.navigate("Reminders")}
+            >
+            <Ionicons
+              name="notifications-outline"
+              size={20}
+               color="#3b82f6"
+             />
+            </TouchableOpacity>
           </View>
 
           {/* Progress Circle */}

@@ -83,7 +83,9 @@ strokeWidth: 3,
 ],
 };
 
-return ( <SafeAreaView style={styles.safe}> <ScrollView showsVerticalScrollIndicator={false}>
+return (
+   <SafeAreaView style={styles.safe}>
+     <ScrollView showsVerticalScrollIndicator={false}>
 
 
     {/* HEADER */}

@@ -1,185 +1,888 @@
-import { View, Text, StyleSheet, ScrollView } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity
+} from "react-native";
+
 import { SafeAreaView } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useEffect, useState } from "react";
+import { Ionicons } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
+import * as Print from "expo-print";
+import * as Sharing from "expo-sharing";
 
 export default function HistoryScreen() {
 
-const [logs, setLogs] = useState([]);
+  const navigation = useNavigation();
 
-useEffect(() => {
-loadHistory();
-}, []);
+  const [logs, setLogs] = useState([]);
 
-const loadHistory = async () => {
-try {
-const data = await AsyncStorage.getItem(
-"hydrationData"
-);
+  useEffect(() => {
+    loadHistory();
+  }, []);
 
-  if (!data) return;
+  /* LOAD HISTORY */
 
-  const parsed = JSON.parse(data);
+  const loadHistory = async () => {
+    try {
 
-  setLogs(parsed.logs || []);
+      const data = await AsyncStorage.getItem(
+        "hydrationData"
+      );
 
-} catch (e) {
-  console.log(e);
-}
+      if (!data) return;
 
+      const parsed = JSON.parse(data);
 
+      setLogs(parsed.logs || []);
+
+    } catch (e) {
+      console.log(e);
+    }
+  };
+
+  /* DELETE LOG */
+
+  const deleteLog = async (index) => {
+    try {
+
+      const data = await AsyncStorage.getItem(
+        "hydrationData"
+      );
+
+      if (!data) return;
+
+      const parsed = JSON.parse(data);
+
+      const updatedLogs = parsed.logs.filter(
+        (_, i) => i !== index
+      );
+
+      const deletedAmount =
+        parsed.logs[index].amount;
+
+      const updatedIntake =
+        parsed.intake - deletedAmount;
+
+      const updatedData = {
+        ...parsed,
+        logs: updatedLogs,
+        intake: updatedIntake,
+      };
+
+      await AsyncStorage.setItem(
+        "hydrationData",
+        JSON.stringify(updatedData)
+      );
+
+      setLogs(updatedLogs);
+
+    } catch (e) {
+      console.log(e);
+    }
+  };
+
+  /* GROUP BY DATE */
+
+  const groupByDate = () => {
+
+    const grouped = {};
+
+    logs.forEach((log) => {
+
+      const date = log.date || "Today";
+
+      if (!grouped[date]) {
+        grouped[date] = [];
+      }
+
+      grouped[date].push(log);
+
+    });
+
+    return grouped;
+  };
+
+  const groupedLogs = groupByDate();
+
+  // WEEKLY PERFORMANCE
+
+const goal = 2772;
+
+const calculateWeeklyPerformance = () => {
+
+  if (logs.length === 0) {
+    return {
+      avgIntake: 0,
+      completion: 0,
+    };
+  }
+
+  // Take last 7 logs days intake
+
+  const last7 = logs.slice(-7);
+
+  const total = last7.reduce(
+    (sum, item) => sum + item.amount,
+    0
+  );
+
+  const avgIntake = Math.round(
+    total / last7.length
+  );
+
+  const completion = Math.min(
+    Math.round((avgIntake / goal) * 100),
+    100
+  );
+
+  return {
+    avgIntake,
+    completion,
+  };
 };
 
-const deleteLog = async (index) => {
+const weeklyStats =
+  calculateWeeklyPerformance();
+
+  // MONTHLY COMPARISON
+
+const calculateMonthlyComparison = () => {
+
+  const now = new Date();
+
+  const currentMonth =
+    now.getMonth();
+
+  const lastMonth =
+    currentMonth === 0
+      ? 11
+      : currentMonth - 1;
+
+  let thisMonthTotal = 0;
+  let lastMonthTotal = 0;
+
+  logs.forEach((log) => {
+
+    if (!log.date) return;
+
+    const logDate =
+      new Date(log.date);
+
+    const logMonth =
+      logDate.getMonth();
+
+    if (logMonth === currentMonth) {
+      thisMonthTotal += log.amount;
+    }
+
+    if (logMonth === lastMonth) {
+      lastMonthTotal += log.amount;
+    }
+
+  });
+
+  let percentChange = 0;
+
+  if (lastMonthTotal > 0) {
+    percentChange = Math.round(
+      ((thisMonthTotal -
+        lastMonthTotal) /
+        lastMonthTotal) * 100
+    );
+  }
+
+  return {
+    thisMonthTotal,
+    lastMonthTotal,
+    percentChange,
+  };
+};
+
+const monthlyStats =
+  calculateMonthlyComparison();
+
+  // STREAK CALCULATION
+
+const calculateStreak = () => {
+
+  if (!logs.length) return 0;
+
+  const goal = 2772;
+
+  const sortedLogs = [...logs].sort(
+    (a, b) =>
+      new Date(b.date) -
+      new Date(a.date)
+  );
+
+  let streak = 0;
+  let currentDate = new Date();
+
+  for (let i = 0; i < sortedLogs.length; i++) {
+
+    const logDate = new Date(
+      sortedLogs[i].date
+    );
+
+    const diff =
+      Math.floor(
+        (currentDate - logDate) /
+        (1000 * 60 * 60 * 24)
+      );
+
+    if (diff === streak) {
+
+      const dayTotal = logs
+        .filter(
+          (l) =>
+            l.date ===
+            sortedLogs[i].date
+        )
+        .reduce(
+          (sum, l) =>
+            sum + l.amount,
+          0
+        );
+
+      if (dayTotal >= goal) {
+        streak++;
+      } else {
+        break;
+      }
+
+    } else {
+      break;
+    }
+  }
+
+  return streak;
+};
+
+const streak = calculateStreak();
+
+const getBadge = () => {
+
+  if (streak >= 30)
+    return "Hydration Champion 🏆";
+
+  if (streak >= 14)
+    return "Hydration Pro 💪";
+
+  if (streak >= 7)
+    return "Consistency Star ⭐";
+
+  if (streak >= 3)
+    return "Getting There 👍";
+
+  return "Start Your Journey 💧";
+};
+
+const badge = getBadge();
+  
+const exportPDF = async () => {
+
   try {
-    const data = await AsyncStorage.getItem(
-      "hydrationData"
-    );
 
-    if (!data) return;
+    if (!logs.length) {
+      alert("No history to export");
+      return;
+    }
 
-    const parsed = JSON.parse(data);
+    // GROUP TOTALS
 
-    const updatedLogs = parsed.logs.filter(
-      (_, i) => i !== index
-    );
+    const totals = {};
 
-    const deletedAmount =
-      parsed.logs[index].amount;
+    logs.forEach((log) => {
 
-    const updatedIntake =
-      parsed.intake - deletedAmount;
+      if (!totals[log.date]) {
+        totals[log.date] = 0;
+      }
 
-    const updatedData = {
-      ...parsed,
-      logs: updatedLogs,
-      intake: updatedIntake,
-    };
+      totals[log.date] += log.amount;
 
-    await AsyncStorage.setItem(
-      "hydrationData",
-      JSON.stringify(updatedData)
-    );
+    });
 
-    setLogs(updatedLogs);
+    // HTML CONTENT
+
+    const html = `
+      <html>
+      <body style="font-family: Arial; padding:20px;">
+
+        <h1>Hydration Report 💧</h1>
+
+        <h3>Total Logs: ${logs.length}</h3>
+
+        <table border="1" 
+          cellpadding="8" 
+          cellspacing="0"
+          width="100%"
+        >
+          <tr>
+            <th>Date</th>
+            <th>Time</th>
+            <th>Amount (ml)</th>
+          </tr>
+
+          ${logs.map(
+            (log) => `
+            <tr>
+              <td>${log.date}</td>
+              <td>${log.time}</td>
+              <td>${log.amount}</td>
+            </tr>
+          `
+          ).join("")}
+
+        </table>
+
+        <h2>Daily Totals</h2>
+
+        <ul>
+          ${Object.keys(totals).map(
+            (date) => `
+            <li>
+              ${date} → 
+              ${totals[date]} ml
+            </li>
+          `
+          ).join("")}
+        </ul>
+
+      </body>
+      </html>
+    `;
+
+    const { uri } =
+      await Print.printToFileAsync({
+        html,
+      });
+
+    await Sharing.shareAsync(uri);
 
   } catch (e) {
     console.log(e);
   }
+
 };
 
-return ( <SafeAreaView style={styles.safe}> <ScrollView
-     showsVerticalScrollIndicator={false}
-     contentContainerStyle={styles.scroll}
-   >
+  /* UI */
 
+  return (
 
-    {/* HEADER */}
-    <Text style={styles.header}>
-      History
-    </Text>
+    <SafeAreaView style={styles.safe}>
 
-    {/* TODAY LABEL */}
-    <Text style={styles.date}>
-      Today
-    </Text>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scroll}
+      >
 
-    {/* EMPTY STATE */}
-    {logs.length === 0 && (
-      <View style={styles.emptyBox}>
-        <Text style={styles.emptyText}>
-          No water logged yet 💧
-        </Text>
-      </View>
-    )}
+        {/* HEADER */}
+        <View style={styles.headerRow}>
 
-    {/* LOG LIST */}
-    {logs.map((item, index) => (
-      <View key={index} style={styles.logCard}>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+          >
+            <Ionicons
+              name="arrow-back"
+              size={22}
+              color="#111"
+            />
+          </TouchableOpacity>
 
-  <View>
-    <Text style={styles.amount}>
-      {item.amount} ml
-    </Text>
+          <Text style={styles.header}>
+            History
+          </Text>
 
-    <Text style={styles.time}>
-      {item.time}
-    </Text>
+        </View>
+
+        <TouchableOpacity
+  style={styles.exportBtn}
+  onPress={exportPDF}
+>
+  <Text style={styles.exportText}>
+    Export PDF
+  </Text>
+</TouchableOpacity>
+
+        {/* WEEKLY PERFORMANCE */}
+
+<View style={styles.weekCard}>
+
+  <Text style={styles.weekTitle}>
+    Weekly Performance
+  </Text>
+
+  <Text style={styles.weekValue}>
+    {weeklyStats.avgIntake} ml / day
+  </Text>
+
+  <View style={styles.progressBar}>
+
+    <View
+      style={[
+        styles.progressFill,
+        {
+          width:
+            `${weeklyStats.completion}%`
+        }
+      ]}
+    />
+
   </View>
 
-  <Text
-    style={styles.delete}
-    onPress={() => deleteLog(index)}
-  >
-    🗑
+  <Text style={styles.weekPercent}>
+    {weeklyStats.completion}% of goal
   </Text>
 
 </View>
-    ))}
 
-  </ScrollView>
-</SafeAreaView>
+{/* MONTHLY COMPARISON */}
 
+<View style={styles.monthCard}>
 
-);
+  <Text style={styles.monthTitle}>
+    Monthly Comparison
+  </Text>
+
+  <View style={styles.monthRow}>
+
+    <View>
+      <Text style={styles.monthLabel}>
+        This Month
+      </Text>
+
+      <Text style={styles.monthValue}>
+        {monthlyStats.thisMonthTotal} ml
+      </Text>
+    </View>
+
+    <View>
+      <Text style={styles.monthLabel}>
+        Last Month
+      </Text>
+
+      <Text style={styles.monthValue}>
+        {monthlyStats.lastMonthTotal} ml
+      </Text>
+    </View>
+
+  </View>
+
+  {/* PERCENT CHANGE */}
+
+  <Text
+    style={[
+      styles.changeText,
+      {
+        color:
+          monthlyStats.percentChange >= 0
+            ? "#22c55e"
+            : "#ef4444"
+      }
+    ]}
+  >
+    {monthlyStats.percentChange >= 0
+      ? "↑"
+      : "↓"}{" "}
+    {Math.abs(
+      monthlyStats.percentChange
+    )}% compared to last month
+  </Text>
+
+</View>
+
+{/* STREAK BADGE */}
+
+<View style={styles.streakCard}>
+
+  <View style={styles.streakLeft}>
+
+    <View style={styles.trophyCircle}>
+      <Text style={styles.trophyIcon}>
+        🏆
+      </Text>
+    </View>
+
+    <View>
+      <Text style={styles.streakTitle}>
+        Current Streak
+      </Text>
+
+      <Text style={styles.streakSub}>
+        {badge}
+      </Text>
+    </View>
+
+  </View>
+
+  <Text style={styles.streakCount}>
+    {streak} 🔥
+  </Text>
+
+</View>
+
+        {/* EMPTY STATE */}
+        {logs.length === 0 && (
+          <View style={styles.emptyBox}>
+            <Text style={styles.emptyText}>
+              No water logged yet 💧
+            </Text>
+          </View>
+        )}
+
+        {/* GROUPED LOG LIST */}
+        {Object.keys(groupedLogs).map((date) => (
+
+          <View key={date}>
+
+            {/* DATE HEADER */}
+            {/* DATE HEADER + TOTAL + BADGE */}
+
+<View style={styles.dateHeader}>
+
+  <Text style={styles.date}>
+    {date}
+  </Text>
+
+  {/* DAILY TOTAL */}
+
+  <Text style={styles.totalText}>
+    {groupedLogs[date]
+      .reduce(
+        (sum, item) => sum + item.amount,
+        0
+      )} ml
+  </Text>
+
+  {/* BADGE */}
+
+  {(() => {
+
+    const total =
+      groupedLogs[date]
+        .reduce(
+          (sum, item) =>
+            sum + item.amount,
+          0
+        );
+
+    const percent =
+      (total / goal) * 100;
+
+    let badge = "⚠️ Low";
+    let color = "#ef4444";
+
+    if (percent >= 100) {
+      badge = "🏆 Goal Met";
+      color = "#22c55e";
+    }
+    else if (percent >= 50) {
+      badge = "👍 Good";
+      color = "#3b82f6";
+    }
+
+    return (
+      <Text
+        style={[
+          styles.badge,
+          { backgroundColor: color }
+        ]}
+      >
+        {badge}
+      </Text>
+    );
+
+  })()}
+
+</View>
+
+            {groupedLogs[date].map((item, index) => {
+
+              const globalIndex = logs.findIndex(
+                (l) =>
+                  l.time === item.time &&
+                  l.amount === item.amount &&
+                  (l.date || "Today") === date
+              );
+
+              return (
+
+                <View
+                  key={`${date}-${index}`}
+                  style={styles.logCard}
+                >
+
+                  <View>
+                    <Text style={styles.amount}>
+                      {item.amount} ml
+                    </Text>
+
+                    <Text style={styles.time}>
+                      {item.time}
+                    </Text>
+                  </View>
+
+                  <Ionicons
+                    name="trash-outline"
+                    size={18}
+                    color="#ef4444"
+                    onPress={() =>
+                      deleteLog(globalIndex)
+                    }
+                  />
+
+                </View>
+
+              );
+
+            })}
+
+          </View>
+
+        ))}
+
+      </ScrollView>
+
+    </SafeAreaView>
+  );
 }
+
+/* STYLES */
 
 const styles = StyleSheet.create({
 
-safe: {
-flex: 1,
-backgroundColor: "#e6f0f4",
+  safe: {
+    flex: 1,
+    backgroundColor: "#e6f0f4",
+  },
+
+  scroll: {
+    padding: 20,
+    paddingBottom: 40,
+  },
+
+  /* HEADER */
+
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+
+  header: {
+    fontSize: 22,
+    fontWeight: "700",
+    marginLeft: 10,
+    color: "#111827",
+  },
+
+  /* DATE */
+
+  date: {
+    fontSize: 14,
+    fontWeight: "700",
+    marginTop: 10,
+    marginBottom: 8,
+    color: "#374151",
+  },
+
+  /* EMPTY */
+
+  emptyBox: {
+    backgroundColor: "#f3f4f6",
+    padding: 30,
+    borderRadius: 16,
+    alignItems: "center",
+  },
+
+  emptyText: {
+    color: "#9ca3af",
+  },
+
+  /* LOG CARD */
+
+  logCard: {
+    backgroundColor: "#f3f4f6",
+    padding: 16,
+    borderRadius: 16,
+    marginBottom: 12,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+
+  amount: {
+    fontWeight: "700",
+    color: "#111827",
+    fontSize: 15,
+  },
+
+  time: {
+    color: "#6b7280",
+    fontSize: 12,
+    marginTop: 2,
+  },
+  dateHeader: {
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "space-between",
+  marginTop: 10,
+  marginBottom: 8,
 },
 
-scroll: {
-padding: 20,
+totalText: {
+  fontSize: 13,
+  fontWeight: "600",
+  color: "#2563eb",
 },
 
-header: {
-fontSize: 22,
-fontWeight: "700",
-marginBottom: 20,
-color: "#111827",
+badge: {
+  fontSize: 11,
+  color: "#fff",
+  paddingHorizontal: 10,
+  paddingVertical: 4,
+  borderRadius: 10,
+  overflow: "hidden",
+},
+/* WEEKLY CARD */
+
+weekCard: {
+  backgroundColor: "#f3f4f6",
+  marginBottom: 20,
+  padding: 18,
+  borderRadius: 18,
 },
 
-date: {
-fontSize: 14,
-fontWeight: "600",
-marginBottom: 12,
-color: "#6b7280",
+weekTitle: {
+  fontWeight: "700",
+  marginBottom: 6,
+  color: "#111827",
 },
 
-emptyBox: {
-backgroundColor: "#f3f4f6",
-padding: 30,
-borderRadius: 16,
-alignItems: "center",
+weekValue: {
+  fontSize: 16,
+  fontWeight: "700",
+  color: "#2563eb",
+  marginBottom: 10,
 },
 
-emptyText: {
-color: "#9ca3af",
+progressBar: {
+  height: 10,
+  backgroundColor: "#e5e7eb",
+  borderRadius: 10,
+  overflow: "hidden",
 },
 
-logCard: {
-backgroundColor: "#f3f4f6",
-padding: 16,
-borderRadius: 16,
-marginBottom: 12,
-flexDirection: "row",
-justifyContent: "space-between",
+progressFill: {
+  height: 10,
+  backgroundColor: "#3b82f6",
 },
 
-amount: {
-fontWeight: "700",
-color: "#111827",
+weekPercent: {
+  marginTop: 8,
+  fontSize: 12,
+  color: "#6b7280",
+},
+/* MONTHLY CARD */
+
+monthCard: {
+  backgroundColor: "#f3f4f6",
+  marginBottom: 20,
+  padding: 18,
+  borderRadius: 18,
 },
 
-time: {
-color: "#6b7280",
+monthTitle: {
+  fontWeight: "700",
+  marginBottom: 12,
+  color: "#111827",
 },
-delete: {
+
+monthRow: {
+  flexDirection: "row",
+  justifyContent: "space-between",
+},
+
+monthLabel: {
+  fontSize: 12,
+  color: "#6b7280",
+},
+
+monthValue: {
+  fontSize: 16,
+  fontWeight: "700",
+  color: "#2563eb",
+  marginTop: 2,
+},
+
+changeText: {
+  marginTop: 12,
+  fontWeight: "600",
+},
+/* STREAK CARD */
+
+streakCard: {
+  backgroundColor: "#f3f4f6",
+  marginBottom: 20,
+  padding: 18,
+  borderRadius: 18,
+  flexDirection: "row",
+  justifyContent: "space-between",
+  alignItems: "center",
+},
+
+streakLeft: {
+  flexDirection: "row",
+  alignItems: "center",
+},
+
+trophyCircle: {
+  width: 42,
+  height: 42,
+  borderRadius: 21,
+  backgroundColor: "#f59e0b",
+  justifyContent: "center",
+  alignItems: "center",
+  marginRight: 12,
+},
+
+trophyIcon: {
   fontSize: 18,
+  color: "#fff",
+},
+
+streakTitle: {
+  fontWeight: "700",
+  color: "#111827",
+},
+
+streakSub: {
+  fontSize: 12,
+  color: "#6b7280",
+  marginTop: 2,
+},
+
+streakCount: {
+  fontSize: 20,
+  fontWeight: "700",
   color: "#ef4444",
+},
+exportBtn: {
+  backgroundColor: "#3b82f6",
+  padding: 10,
+  borderRadius: 10,
+  alignSelf: "flex-end",
+  marginBottom: 10,
+},
+
+exportText: {
+  color: "#fff",
+  fontWeight: "600",
+  fontSize: 12,
 },
 
 });
