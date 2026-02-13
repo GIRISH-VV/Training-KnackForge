@@ -11,6 +11,11 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
+import { registerUser, loginUser }
+from "../api/authApi";
+
+import { saveToken }
+from "../services/storageService";
 
 export default function AuthScreen() {
   const [activeTab, setActiveTab] = useState("login");
@@ -55,6 +60,49 @@ export default function AuthScreen() {
 
    navigation.replace("Onboarding");
   };
+ const handleAuth = async () => {
+  try {
+
+    if (activeTab === "register") {
+
+      await registerUser({
+        name,
+        email,
+        password,
+      });
+
+      Alert.alert("Success", "Registered successfully");
+
+    } else {
+
+      const res = await loginUser({
+        email,
+        password,
+      });
+
+      console.log("LOGIN RESPONSE →", res.data);
+
+      const token = res.data.accessToken;
+
+      if (!token) {
+        Alert.alert("Error", "Token not received");
+        return;
+      }
+
+      await saveToken(token);
+
+      navigation.replace("Dashboard");
+    }
+
+  } catch (e) {
+    console.log("LOGIN ERROR →", e.response?.data);
+
+    Alert.alert(
+      "Auth Error",
+      e.response?.data?.message || "Something went wrong"
+    );
+  }
+};
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -146,9 +194,9 @@ export default function AuthScreen() {
             />
 
             <TouchableOpacity
-              style={styles.loginBtn}
-              onPress={handleSubmit}
-            >
+  style={styles.loginBtn}
+  onPress={handleAuth}
+>
               <Text style={styles.loginText}>
                 {activeTab === "login"
                   ? "Login"

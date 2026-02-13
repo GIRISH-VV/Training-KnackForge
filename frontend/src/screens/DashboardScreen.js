@@ -14,6 +14,8 @@ import { useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useEffect } from "react";
 import { useNavigation } from "@react-navigation/native";
+import { useFocusEffect } from "@react-navigation/native";
+import { useCallback } from "react";
 
 
 export default function DashboardScreen() {
@@ -21,7 +23,9 @@ export default function DashboardScreen() {
   const navigation = useNavigation();
 
   //  Intake State
-  const [intake, setIntake] = useState(0);
+ const [intake, setIntake] = useState(0);
+ const [goal, setGoal] = useState(2772);
+  
   const [logs, setLogs] = useState([]);
   const [streak, setStreak] = useState(0);
   const [lastCompletedDate, setLastCompletedDate] = useState(null);
@@ -29,7 +33,7 @@ export default function DashboardScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [customAmount, setCustomAmount] = useState("");
 
-  const goal = 2772;
+ 
 
   const fill = (intake / goal) * 100;
 
@@ -39,22 +43,45 @@ export default function DashboardScreen() {
 }, [intake, logs]);
 
 const saveData = async () => {
+
   try {
+
+    const existing =
+      await AsyncStorage.getItem(
+        "hydrationData"
+      );
+
+    let parsed = existing
+      ? JSON.parse(existing)
+      : { logs: [] };
+
     const today = new Date().toDateString();
+
+    // Remove today's old logs
+    const filtered =
+      parsed.logs.filter(
+        (log) => log.date !== today
+      );
+
+    // Add updated logs
+    const updatedLogs = [
+      ...filtered,
+      ...logs,
+    ];
 
     await AsyncStorage.setItem(
       "hydrationData",
       JSON.stringify({
-        intake,
-        logs,
-        date: today,
-        streak,
-        lastCompletedDate,
+        ...parsed,
+        goal,
+        logs: updatedLogs,
       })
     );
+
   } catch (e) {
     console.log("Save error", e);
   }
+
 };
 
 useEffect(() => {
@@ -159,6 +186,34 @@ const deleteLog = (index, amount) => {
     Math.max(prev - amount, 0)
   );
 };
+
+const loadHydrationData = async () => {
+
+  try {
+
+    const data =
+      await AsyncStorage.getItem(
+        "hydrationData"
+      );
+
+    if (!data) return;
+
+    const parsed = JSON.parse(data);
+
+    setIntake(parsed.intake || 0);
+    setGoal(parsed.goal || 2772);
+
+  } catch (e) {
+    console.log(e);
+  }
+
+};
+
+useFocusEffect(
+  useCallback(() => {
+    loadHydrationData();
+  }, [])
+);
 
   return (
     <SafeAreaView style={styles.safe}>

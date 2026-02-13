@@ -1,20 +1,10 @@
-<<<<<<< HEAD
-import { View, Text } from "react-native";
-
-export default function AnalyticsScreen() {
-  return (
-    <View>
-      <Text>Analytics Screen</Text>
-    </View>
-  );
-}
-=======
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from "react-native";
+import { View, Text, StyleSheet, ScrollView,TouchableOpacity, Dimensions } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useState, useEffect } from "react";
 import { BarChart, LineChart } from "react-native-chart-kit";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useFocusEffect } from "@react-navigation/native";
 
 const screenWidth = Dimensions.get("window").width;
 
@@ -27,6 +17,7 @@ const [streak, setStreak] = useState(0);
 const [goalCompletion, setGoalCompletion] = useState(0);
 const [avgIntake, setAvgIntake] = useState(0);
 
+
 const goal = 2772;
 
 useEffect(() => {
@@ -34,34 +25,55 @@ loadAnalytics();
 }, []);
 
 const loadAnalytics = async () => {
-try {
-const data = await AsyncStorage.getItem("hydrationData");
-if (!data) return;
 
+  try {
 
-  const parsed = JSON.parse(data);
+    const data =
+      await AsyncStorage.getItem(
+        "hydrationData"
+      );
 
-  const todayIntake = parsed.intake || 0;
-  const streakValue = parsed.streak || 0;
+    if (!data) return;
 
-  const tempWeekly = [0,0,0,0,0,0,todayIntake];
-  setWeeklyIntake(tempWeekly);
+    const parsed = JSON.parse(data);
+    const logs = parsed.logs || [];
 
-  setStreak(streakValue);
+    // WEEKLY TOTALS
 
-  const goalPercent = Math.min(
-    Math.round((todayIntake / goal) * 100),
-    100
-  );
-  setGoalCompletion(goalPercent);
+    const last7 = [];
 
-  setAvgIntake(todayIntake);
+    for (let i = 6; i >= 0; i--) {
 
-} catch (e) {
-  console.log(e);
-}
+      const date = new Date();
+      date.setDate(date.getDate() - i);
 
+      const label = date.toDateString();
+
+      const total = logs
+        .filter(
+          (l) => l.date === label
+        )
+        .reduce(
+          (sum, l) =>
+            sum + l.amount,
+          0
+        );
+
+      last7.push(total);
+    }
+
+    setWeeklyIntake(last7);
+
+  } catch (e) {
+    console.log(e);
+  }
 };
+
+useFocusEffect(
+  useCallback(() => {
+    loadAnalytics();
+  }, [])
+);
 
 const weeklyData = {
 labels: ["Wed","Thu","Fri","Sat","Sun","Mon","Tue"],
@@ -82,6 +94,8 @@ strokeWidth: 3,
 },
 ],
 };
+
+
 
 return (
    <SafeAreaView style={styles.safe}>
@@ -369,4 +383,4 @@ fontSize: 13,
 marginBottom: 6,
 },
 });
->>>>>>> 06ab4cd (Analytics Updated)
+
